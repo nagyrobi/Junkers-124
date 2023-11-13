@@ -1,41 +1,12 @@
 #see documentation: https://esphome.io
 
 substitutions:
-  unit_name: "smarttherm"
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  fast_connect: true
-  reboot_timeout: 0s
-
-  ap:
-    ssid: ${unit_name} Fallback Hotspot
-    password: !secret fallback_password
-
-captive_portal:
-
-ota:
-  password: !secret ota_password
-
-# native api of ESPHome
-#api:
-#  password: !secret api_password
-
-# or mqtt (my choice)
- mqtt:
-  broker: !secret mqtt_broker
-  username: !secret mqtt_username
-  password: !secret mqtt_password
-
-# web frontend and REST interface
-web_server:
-  auth:
-    username: !secret web_server_username
-    password: !secret web_server_password
+  unit_name: "Junkers"
+  device_description: "Junkers 1-2-4 controller"
 
 esphome:
   name: ${unit_name}
+  comment: ${device_description}
   platform: ESP8266
   board: d1_mini
   esp8266_restore_from_flash: True # for slider position and switch state
@@ -43,6 +14,31 @@ esphome:
     priority: -100 # after everything is initialized
     then:
       - script.execute: update_pwm_level
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 0s
+
+ota:
+  password: !secret ota_password
+
+api:
+  reboot_timeout: 60min
+  encryption:
+    key: !secret encryption_key
+
+
+# web frontend and REST interface
+web_server:
+  ota: false
+  include_internal: true
+  port: 80
+  version: 2
+  local: true
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
 
 logger:
   level: INFO
@@ -53,24 +49,27 @@ output:
     frequency: 1000 Hz # default
     id: pwm_output
 
-switch:
-  - platform: gpio
-    pin: D4
+light:
+  - platform: status_led
     id: onboard_led
-    inverted: True
     internal: True
+    pin:
+      number: D4
+      inverted: true
 
+switch:
   - platform: template
     name: ${unit_name}_heating
     id: heating
     entity_category: config
-    restore_state: True
+    icon: "mdi:water-boiler"
+    restore_mode: RESTORE_DEFAULT_OFF
     optimistic: True
     turn_on_action:
-      - switch.turn_on: onboard_led
+      - light.turn_on: onboard_led
       - script.execute: set_pwm_level_from_slider
     turn_off_action:
-      - switch.turn_off: onboard_led
+      - light.turn_off: onboard_led
       - script.execute: set_pwm_low_level
 
 script:
@@ -82,7 +81,7 @@ script:
   - id: set_pwm_low_level
     then:
       - lambda: |-
-          id(pwm_output).set_level(0.07);// ~5v off
+          id(pwm_output).set_level(0.19);// ~5v off
 
   - id: update_pwm_level
     then:
@@ -106,6 +105,7 @@ number:
     mode: slider
     optimistic: True
     entity_category: config
+    icon: "mdi:gas-burner"
     on_value:
       then:
       - sensor.template.publish:
@@ -123,8 +123,8 @@ sensor:
     filters:
      # measure voltage and adjust for your device
       - calibrate_linear:
-        - 1 -> 0.25 # ~8v min
-        - 100.0 -> 0.62 # ~15v max
+        - 1 -> 0.32 # ~8v min
+        - 100.0 -> 0.65 # ~15v max
     on_value:
       then:
       - logger.log:
@@ -175,6 +175,7 @@ binary_sensor:
         pullup: True
     name: ${unit_name}_active
     id: power_active
+    device_class: power
     filters: # debounce
-      - delayed_on: 5s
-      - delayed_off: 5s
+      - delayed_on: 300ms
+      - delayed_off: 300ms
