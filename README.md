@@ -7,5 +7,3 @@ Controlling a Junkers heating (Eurostar ZWE24) with an IoT thermostat
 * SmartPhone app (Blynk)
 * 3D Printed enclosure (Fusion360)
 * Alternative config with ESPHome and Home Assistant
-
-All documentation is in the Wiki : https://github.com/Strooom/SmartTherm/wiki
